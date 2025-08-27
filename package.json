@@ -1,15 +1,37 @@
 {
-  "name": "tax-prep-mcp-server",
+  "name": "client-request-mcp-server",
   "version": "1.0.0",
   "type": "module",
-  "main": "tax-prep-simple.js",
+  "description": "MCP Server for managing client requests in Salesforce - integrates with Retell AI agents",
+  "main": "client-request-mcp.js",
   "scripts": {
-    "start": "node tax-prep-        simple.js"
+    "start": "node client-request-mcp.js",
+    "dev": "node --watch client-request-mcp.js",
+    "test": "node test-client-request-mcp.js"
   },
   "dependencies": {
     "express": "^4.19.2",
     "jsforce": "^1.11.1",
-    "nodemailer": "^6.9.0",
     "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "TaxRise",
+  "license": "ISC",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "retell",
+    "salesforce",
+    "client-requests",
+    "ai-agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/taxrise/client-request-mcp.git"
   }
 }

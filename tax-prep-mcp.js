@@ -133,6 +133,17 @@ app.post('/', async (req, res) => {
                   limit: { type: 'number', description: 'Maximum number of cases to return (default: 10)' }
                 }
               }
+            },
+            {
+              name: 'debug_case_data',
+              description: 'Debug - show raw data for a specific case to validate fields',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  caseId: { type: 'string', description: 'Case ID to examine' }
+                },
+                required: ['caseId']
+              }
             }
           ]
         };
@@ -166,6 +177,10 @@ app.post('/', async (req, res) => {
             response.result = await handleListCaseCustomObjects(args);
             break;
             
+          case 'debug_case_data':
+            response.result = await handleDebugCaseData(args);
+            break;
+            
           default:
             response.error = { code: -32601, message: `Unknown tool: ${name}` };
         }
@@ -184,11 +199,14 @@ app.post('/', async (req, res) => {
 
 // Tool implementations
 async function handleGetPendingCases(args) {
+  console.log('🔍 DEBUG: handleGetPendingCases called with args:', JSON.stringify(args, null, 2));
+  
   // For now, let's query Document__c directly since it holds the pending signature status
   let docWhereClause = "Prep_Status__c = 'Pending Signatures'";
   
   if (args.caseId) {
     docWhereClause += ` AND Case__c = '${args.caseId}'`;
+    console.log('🔍 DEBUG: Filtering by caseId:', args.caseId);
   }
 
   // Query Document__c directly for pending signatures
@@ -200,7 +218,10 @@ async function handleGetPendingCases(args) {
     LIMIT 50
   `;
   
+  console.log('🔍 DEBUG: Document query:', docQuery);
+  
   const docResult = await conn.query(docQuery);
+  console.log('🔍 DEBUG: Document query returned', docResult.records?.length || 0, 'records');
   
   // Group documents by case
   const caseGroups = {};
@@ -212,9 +233,12 @@ async function handleGetPendingCases(args) {
     caseGroups[caseId].push(doc);
   }
   
+  console.log('🔍 DEBUG: Grouped documents by case:', Object.keys(caseGroups).length, 'cases');
+  
   // Get case details for each case with pending documents
   const cases = [];
   for (const [caseId, documents] of Object.entries(caseGroups)) {
+    console.log('🔍 DEBUG: Looking up case details for:', caseId, 'with', documents.length, 'documents');
     try {
       const caseQuery = `
         SELECT Id, Name, CaseType__c, OwnerId
@@ -224,6 +248,7 @@ async function handleGetPendingCases(args) {
       
       const caseResult = await conn.query(caseQuery);
       const caseRecord = caseResult.records?.[0];
+      console.log('🔍 DEBUG: Case lookup result:', caseRecord ? 'found' : 'not found');
       
       cases.push({
         caseId: caseId,
@@ -234,9 +259,11 @@ async function handleGetPendingCases(args) {
         totalPendingDocuments: documents.length
       });
     } catch (error) {
-      console.log(`Error getting case ${caseId}:`, error.message);
+      console.log(`🔍 DEBUG: Error getting case ${caseId}:`, error.message);
     }
   }
+
+  console.log('🔍 DEBUG: Final result - returning', cases.length, 'cases');
 
   return {
     content: [{
@@ -480,7 +507,56 @@ async function handleListCaseCustomObjects(args) {
   };
 }
 
+async function handleDebugCaseData(args) {
+  const { caseId } = args;
+  const results = {};
+  
+  // 1. Check if Case__c exists
+  try {
+    const caseQuery = `SELECT Id, Name, CaseType__c, CreatedDate FROM Case__c WHERE Id = '${caseId}'`;
+    const caseResult = await conn.query(caseQuery);
+    results.case = {
+      found: caseResult.records.length > 0,
+      data: caseResult.records[0] || null
+    };
+  } catch (error) {
+    results.case = { error: error.message };
+  }
+  
+  // 2. Check for Document__c records
+  try {
+    const docQuery = `SELECT Id, Name, Year__c, Agency__c, Prep_Status__c, Case__c, CreatedDate FROM Document__c WHERE Case__c = '${caseId}'`;
+    const docResult = await conn.query(docQuery);
+    results.documents = {
+      total: docResult.records.length,
+      pendingSignatures: docResult.records.filter(doc => doc.Prep_Status__c === 'Pending Signatures').length,
+      allRecords: docResult.records
+    };
+  } catch (error) {
+    results.documents = { error: error.message };
+  }
+  
+  // 3. Check for any standard Case records (just to compare)
+  try {
+    const stdCaseQuery = `SELECT Id, CaseNumber, Subject, Status FROM Case WHERE Id = '${caseId}'`;
+    const stdCaseResult = await conn.query(stdCaseQuery);
+    results.standardCase = {
+      found: stdCaseResult.records.length > 0,
+      data: stdCaseResult.records[0] || null
+    };
+  } catch (error) {
+    results.standardCase = { error: error.message };
+  }
+
+  return {
+    content: [{
+      type: 'text',
+      text: `🔍 DEBUG DATA for case ${caseId}:\n${JSON.stringify(results, null, 2)}`
+    }]
+  };
+}
+
 app.listen(port, () => {
   console.log(`Tax Prep MCP Server running on port ${port}`);
-  console.log('Available tools: get_pending_signature_cases, send_returns_to_client, create_mail_request, describe_object_fields, create_tax_return_documents, list_case_custom_objects');
+  console.log('Available tools: get_pending_signature_cases, send_returns_to_client, create_mail_request, describe_object_fields, create_tax_return_documents, list_case_custom_objects, debug_case_data');
 });
