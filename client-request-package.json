@@ -1,0 +1,22 @@
+{
+  "name": "client-request-mcp-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MCP Server for managing client requests in Salesforce - integrates with Retell AI agents",
+  "main": "client-request-mcp.js",
+  "scripts": {
+    "start": "node client-request-mcp.js",
+    "dev": "node --watch client-request-mcp.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "jsforce": "^1.11.1",
+    "dotenv": "^16.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "TaxRise",
+  "license": "ISC"
+}
+

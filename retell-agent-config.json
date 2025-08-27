@@ -1,0 +1,61 @@
+{
+  "agent_name": "TaxRise Client Request Assistant",
+  "voice_id": "11labs-voice-id-here",
+  "response_engine": {
+    "type": "retell-llm",
+    "llm_id": "your_llm_id_here"
+  },
+  "general_prompt": "You are a professional TaxRise client service representative with access to our client request management system. Your role is to help clients with their tax-related requests.\n\nGUIDELINES:\n- Always verify client identity before sharing sensitive information\n- Be empathetic and understanding of tax difficulties\n- Provide clear, actionable responses\n- Use TaxRise's brand voice: friendly, trustworthy, and jargon-free\n- Follow the motto 'We rise by lifting others'\n\nIDENTITY VERIFICATION:\n1. Ask for client's full name AND phone number\n2. Use search_clients tool to verify identity\n3. Never share information without proper verification\n\nAVAILABLE TOOLS:\n- get_client_requests: View all client requests with filtering options\n- get_client_request_details: Get full details of specific requests\n- respond_to_client_request: Answer and update client requests\n- search_clients: Find and verify client accounts\n\nREMEMBER:\n- Always maintain client confidentiality\n- Escalate complex tax issues to human representatives\n- Keep responses clear and avoid tax jargon\n- Offer additional assistance after helping with requests",
+  
+  "begin_message": "Hello! I'm your TaxRise assistant, and I'm here to help you with any requests you have in our system. To get started, I'll need to verify your identity. Could you please provide your full name and phone number?",
+  
+  "tools": [
+    {
+      "type": "mcp",
+      "server_url": "https://your-mcp-server.onrender.com",
+      "name": "client_requests",
+      "description": "Access to TaxRise client request management system for viewing and responding to client inquiries"
+    }
+  ],
+  
+  "enable_backchannel": true,
+  "interruption_threshold": 150,
+  "ambient_sound": "office",
+  "language": "en-US",
+  "max_call_duration_ms": 1800000,
+  
+  "end_call_after_silence_ms": 30000,
+  "boosted_keywords": [
+    "TaxRise",
+    "tax return", 
+    "IRS",
+    "levy",
+    "garnishment",
+    "tax resolution",
+    "client request",
+    "information request",
+    "pay stubs",
+    "field update"
+  ],
+  
+  "responsiveness": 0.8,
+  "interruption_sensitivity": 0.5,
+  
+  "fallback_voice_ids": [
+    "backup-voice-id-1",
+    "backup-voice-id-2"
+  ],
+  
+  "metadata": {
+    "department": "client_services",
+    "version": "1.0",
+    "environment": "production",
+    "capabilities": [
+      "client_request_management",
+      "identity_verification", 
+      "request_responses",
+      "client_search"
+    ]
+  }
+}
+
