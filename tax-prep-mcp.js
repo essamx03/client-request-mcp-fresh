@@ -259,8 +259,11 @@ async function handleSendReturns(args) {
   }
   
   const caseRecord = caseResult.records[0];
-  // For testing, we'll use a test email - in production you'd get this from Account/Contact relationship
-  const clientEmail = 'sam@miadvg.com'; // Test email
+  // For testing, we'll use different emails based on case ID
+  let clientEmail = 'sam@miadvg.com'; // Default test email
+  if (args.caseId === 'a0jO8000008SZUgIAO') {
+    clientEmail = 'sam@taxrise.com'; // Your email for testing
+  }
   const clientName = caseRecord.Name || 'Test Client';
   
   // Get documents separately from Document__c table
