@@ -1,20 +1,10 @@
-# Render Blueprint for Client Request MCP Server
-# This file configures automatic deployment on Render
-
 services:
   - type: web
     name: client-request-mcp-server
     env: node
-    region: oregon
-    plan: starter
-    buildCommand: npm install --production
-    startCommand: node client-request-mcp.js
+    buildCommand: npm ci
+    startCommand: npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: SF_INSTANCE_URL
-        sync: false # Set this in Render dashboard
-      - key: SF_ACCESS_TOKEN
-        sync: false # Set this in Render dashboard (keep secure)
-

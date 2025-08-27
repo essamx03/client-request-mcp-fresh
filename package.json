@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node client-request-mcp.js",
     "dev": "node --watch client-request-mcp.js",
-    "test": "node test-client-request-mcp.js"
+    "test": "node test-client-request-mcp.js",
+    "build": "echo 'No build step needed'"
   },
   "dependencies": {
     "express": "^4.19.2",
@@ -16,7 +17,7 @@
     "node-fetch": "^3.3.2"
   },
   "engines": {
-    "node": ">=18"
+    "node": "18.x"
   },
   "author": "TaxRise",
   "license": "ISC",
