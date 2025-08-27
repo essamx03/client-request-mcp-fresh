@@ -36,6 +36,96 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Handle MCP requests sent to root path
+app.post('/', (req, res) => {
+  const { method } = req.body;
+  
+  if (method === 'initialize') {
+    const { params } = req.body;
+    const clientProtocolVersion = params?.protocolVersion || '2024-11-05';
+    
+    const supportedVersions = ['2024-11-05', '2025-06-18'];
+    const protocolVersion = supportedVersions.includes(clientProtocolVersion) 
+      ? clientProtocolVersion 
+      : '2024-11-05';
+
+    res.json({
+      jsonrpc: '2.0',
+      id: req.body.id,
+      result: {
+        protocolVersion: protocolVersion,
+        capabilities: {
+          tools: {}
+        },
+        serverInfo: {
+          name: 'simple-mcp-test',
+          version: '1.0.0'
+        }
+      }
+    });
+  } else if (method === 'tools/list') {
+    res.json({
+      jsonrpc: '2.0',
+      id: req.body.id,
+      result: {
+        tools: [
+          {
+            name: 'say_hello',
+            description: 'A simple test tool that says hello with a name',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                name: {
+                  type: 'string',
+                  description: 'The name to greet'
+                }
+              },
+              required: ['name']
+            }
+          }
+        ]
+      }
+    });
+  } else if (method === 'tools/call') {
+    const { params } = req.body;
+    const { name, arguments: args } = params;
+    
+    if (name === 'say_hello') {
+      const personName = args.name || 'World';
+      res.json({
+        jsonrpc: '2.0',
+        id: req.body.id,
+        result: {
+          content: [
+            {
+              type: 'text',
+              text: `Hello, ${personName}! This is a test from the MCP server.`
+            }
+          ]
+        }
+      });
+    } else {
+      res.status(400).json({
+        jsonrpc: '2.0',
+        id: req.body.id,
+        error: {
+          code: -32601,
+          message: `Unknown tool: ${name}`
+        }
+      });
+    }
+  } else {
+    res.status(400).json({
+      jsonrpc: '2.0',
+      id: req.body.id,
+      error: {
+        code: -32601,
+        message: `Unknown method: ${method}`
+      }
+    });
+  }
+});
+
 // MCP Initialize endpoint - Updated to support Retell's protocol version
 app.post('/initialize', (req, res) => {
   const { params } = req.body;
