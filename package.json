@@ -12,9 +12,7 @@
   "dependencies": {
     "express": "^4.19.2",
     "jsforce": "^1.11.1",
-    "dotenv": "^16.0.0"
-  },
-  "devDependencies": {
+    "dotenv": "^16.0.0",
     "node-fetch": "^3.3.2"
   },
   "engines": {
@@ -32,6 +30,6 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/taxrise/client-request-mcp.git"
+    "url": "https://github.com/essamx03/client-request-mcp-fresh.git"
   }
 }

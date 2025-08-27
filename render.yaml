@@ -5,23 +5,16 @@ services:
   - type: web
     name: client-request-mcp-server
     env: node
-    region: oregon # or virginia, singapore, ohio, etc.
-    plan: starter # free tier
-    buildCommand: npm install
-    startCommand: npm start
+    region: oregon
+    plan: starter
+    buildCommand: npm install --production
+    startCommand: node client-request-mcp.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000 # Render's default port
       - key: SF_INSTANCE_URL
         sync: false # Set this in Render dashboard
       - key: SF_ACCESS_TOKEN
         sync: false # Set this in Render dashboard (keep secure)
-    domains:
-      - type: apex
-        name: client-request-mcp # Will be: client-request-mcp.onrender.com
-      - type: www
-        name: client-request-mcp # Will be: www.client-request-mcp.onrender.com
 
