@@ -2,9 +2,9 @@
   "name": "tax-prep-mcp-server",
   "version": "1.0.0",
   "type": "module",
-  "main": "tax-prep-mcp.js",
+  "main": "tax-prep-simple.js",
   "scripts": {
-    "start": "node tax-prep-mcp.js"
+    "start": "node tax-prep-simple.js"
   },
   "dependencies": {
     "express": "^4.19.2",
