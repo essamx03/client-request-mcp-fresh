@@ -1,12 +1,15 @@
 {
-  "name": "simple-mcp-test",
+  "name": "tax-prep-mcp-server",
   "version": "1.0.0",
   "type": "module",
-  "main": "simple-mcp-fixed.js",
+  "main": "tax-prep-mcp.js",
   "scripts": {
-    "start": "node simple-mcp-fixed.js"
+    "start": "node tax-prep-mcp.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "jsforce": "^1.11.1",
+    "nodemailer": "^6.9.0",
+    "dotenv": "^16.0.0"
   }
 }
