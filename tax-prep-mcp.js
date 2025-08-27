@@ -1,9 +1,6 @@
 import express from 'express';
 import jsforce from 'jsforce';
 import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3002;
@@ -25,9 +22,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Salesforce connection
-let conn = null;
-let isConnected = false;
+// Salesforce connection using access token
+const conn = new jsforce.Connection({
+  instanceUrl: 'https://taxrise--dustin.sandbox.my.salesforce.com',
+  accessToken: '00DO800000AQRYH!AQEAQFl49y8HDsJAkjSjiq7akPeWHHbMKLO8y3q1Qy9hu_uCkTz6rG0t4K7ZVhh06ETNng7v6Nv2AyzCA.5Ym__bvNF09F1V'
+});
 
 // Email configuration
 const emailTransporter = nodemailer.createTransporter({
@@ -35,29 +34,10 @@ const emailTransporter = nodemailer.createTransporter({
   port: 587,
   secure: false,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
+    user: 'sam@miadvg.com',
+    pass: 'vihp qsst hsdl ajtw'
   }
 });
-
-// Initialize Salesforce connection
-async function initSalesforce() {
-  if (isConnected) return conn;
-  
-  try {
-    conn = new jsforce.Connection({
-      loginUrl: process.env.SF_LOGIN_URL || 'https://test.salesforce.com'
-    });
-    
-    await conn.login(process.env.SF_USERNAME, process.env.SF_PASSWORD + process.env.SF_SECURITY_TOKEN);
-    isConnected = true;
-    console.log('Salesforce connected successfully');
-    return conn;
-  } catch (error) {
-    console.error('Salesforce connection failed:', error);
-    throw error;
-  }
-}
 
 // Health check
 app.get('/health', (req, res) => {
@@ -158,8 +138,6 @@ app.post('/', async (req, res) => {
 
 // Tool implementations
 async function handleGetPendingCases(args) {
-  await initSalesforce();
-  
   let whereClause = "Status = 'Pending Signature'";
   
   if (args.caseId) {
@@ -201,14 +179,12 @@ async function handleGetPendingCases(args) {
   return {
     content: [{
       type: 'text',
-      text: `Found ${cases.length} pending signature cases:\n${JSON.stringify(cases, null, 2)}`
+      text: `Found ${cases.length} pending signature cases. Details: ${JSON.stringify(cases, null, 2)}`
     }]
   };
 }
 
 async function handleSendReturns(args) {
-  await initSalesforce();
-  
   // Get case and contact info
   const caseQuery = `
     SELECT Id, Contact.Name, Contact.Email,
@@ -233,7 +209,7 @@ async function handleSendReturns(args) {
   // Send email
   const years = unsignedReturns.map(r => r.Year__c).join(', ');
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: 'sam@miadvg.com',
     to: clientEmail,
     subject: `Tax Return Documents - Signature Required (${years})`,
     html: `
@@ -256,8 +232,6 @@ async function handleSendReturns(args) {
 }
 
 async function handleCreateMailRequest(args) {
-  await initSalesforce();
-  
   // Get case and contact info
   const caseQuery = `
     SELECT Id, ContactId, Contact.Name, Contact.MailingAddress,

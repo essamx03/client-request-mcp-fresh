@@ -5,76 +5,128 @@ const port = process.env.PORT || 3002;
 
 app.use(express.json());
 
-// CORS headers
+// Add logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`, {
+    headers: req.headers,
+    body: req.body
+  });
+  next();
+});
+
+// Add CORS headers for Retell
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
-  next();
-});
-
-// Minimal logging
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} - ${JSON.stringify(req.body)}`);
-  next();
-});
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Single MCP endpoint handler
-app.post('/', (req, res) => {
-  const { method, id } = req.body;
   
-  const response = {
-    jsonrpc: '2.0',
-    id: id || 0
-  };
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
-  switch (method) {
-    case 'initialize':
-      response.result = {
-        protocolVersion: '2025-06-18',
-        capabilities: { tools: {} },
-        serverInfo: { name: 'simple-mcp-test', version: '1.0.0' }
-      };
-      break;
-      
-    case 'tools/list':
-      response.result = {
-        tools: [{
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    server: 'simple-mcp-test',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// MCP Initialize endpoint - Updated to support Retell's protocol version
+app.post('/initialize', (req, res) => {
+  const { params } = req.body;
+  const clientProtocolVersion = params?.protocolVersion || '2024-11-05';
+  
+  // Support both protocol versions
+  const supportedVersions = ['2024-11-05', '2025-06-18'];
+  const protocolVersion = supportedVersions.includes(clientProtocolVersion) 
+    ? clientProtocolVersion 
+    : '2024-11-05';
+
+  res.json({
+    jsonrpc: '2.0',
+    id: req.body.id,
+    result: {
+      protocolVersion: protocolVersion,
+      capabilities: {
+        tools: {}
+      },
+      serverInfo: {
+        name: 'simple-mcp-test',
+        version: '1.0.0'
+      }
+    }
+  });
+});
+
+// MCP Tools List endpoint
+app.post('/tools/list', (req, res) => {
+  res.json({
+    jsonrpc: '2.0',
+    id: req.body.id,
+    result: {
+      tools: [
+        {
           name: 'say_hello',
-          description: 'A simple test tool that says hello',
+          description: 'A simple test tool that says hello with a name',
           inputSchema: {
             type: 'object',
-            properties: { name: { type: 'string', description: 'Name to greet' } },
+            properties: {
+              name: {
+                type: 'string',
+                description: 'The name to greet'
+              }
+            },
             required: ['name']
           }
-        }]
-      };
-      break;
-      
-    case 'tools/call':
-      const { name, arguments: args } = req.body.params || {};
-      if (name === 'say_hello') {
-        response.result = {
-          content: [{ type: 'text', text: `Hello, ${args?.name || 'World'}!` }]
-        };
-      } else {
-        response.error = { code: -32601, message: `Unknown tool: ${name}` };
-      }
-      break;
-      
-    default:
-      response.error = { code: -32601, message: `Unknown method: ${method}` };
-  }
+        }
+      ]
+    }
+  });
+});
+
+// MCP Tools Call endpoint
+app.post('/tools/call', (req, res) => {
+  const { params } = req.body;
+  const { name, arguments: args } = params;
   
-  res.json(response);
+  console.log('Tool called:', name, 'with args:', args);
+  
+  if (name === 'say_hello') {
+    const personName = args.name || 'World';
+    res.json({
+      jsonrpc: '2.0',
+      id: req.body.id,
+      result: {
+        content: [
+          {
+            type: 'text',
+            text: `Hello, ${personName}! This is a test from the MCP server.`
+          }
+        ]
+      }
+    });
+  } else {
+    res.status(400).json({
+      jsonrpc: '2.0',
+      id: req.body.id,
+      error: {
+        code: -32601,
+        message: `Unknown tool: ${name}`
+      }
+    });
+  }
 });
 
 app.listen(port, () => {
-  console.log(`Minimal MCP Server running on port ${port}`);
+  console.log(`Simple MCP Server running on http://localhost:${port}`);
+  console.log('MCP Endpoints:');
+  console.log('  POST /initialize');
+  console.log('  POST /tools/list');
+  console.log('  POST /tools/call');
+  console.log('  GET  /health');
 });
