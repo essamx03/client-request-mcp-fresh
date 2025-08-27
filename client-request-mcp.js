@@ -188,6 +188,24 @@ app.post('/', async (req, res) => {
                 },
                 required: ['searchTerm']
               }
+            },
+            {
+              name: 'find_client_by_phone',
+              description: 'Find client specifically by phone number with intelligent formatting and matching',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  phoneNumber: { 
+                    type: 'string', 
+                    description: 'Phone number to search for (accepts various formats: 555-123-4567, (555) 123-4567, 5551234567, etc.)' 
+                  },
+                  exactMatch: { 
+                    type: 'boolean', 
+                    description: 'If true, requires exact match. If false, allows partial matching (default: false)' 
+                  }
+                },
+                required: ['phoneNumber']
+              }
             }
           ]
         };
@@ -211,6 +229,10 @@ app.post('/', async (req, res) => {
             
           case 'search_clients':
             response.result = await handleSearchClients(args);
+            break;
+
+          case 'find_client_by_phone':
+            response.result = await handleFindClientByPhone(args);
             break;
             
           default:
@@ -425,20 +447,136 @@ async function handleRespondToClientRequest(args) {
   };
 }
 
+// Phone number normalization helper
+function normalizePhoneNumber(phone) {
+  if (!phone) return '';
+  // Remove all non-digits
+  return phone.replace(/\D/g, '');
+}
+
+function formatPhoneForDisplay(phone) {
+  if (!phone) return '';
+  const digits = normalizePhoneNumber(phone);
+  
+  // Format as (xxx) xxx-xxxx for US numbers
+  if (digits.length === 10) {
+    return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+  } else if (digits.length === 11 && digits.startsWith('1')) {
+    return `+1 (${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`;
+  }
+  return phone; // Return original if not standard format
+}
+
+async function handleFindClientByPhone(args) {
+  const { phoneNumber, exactMatch = false } = args;
+  
+  console.log('📞 Searching for client by phone:', phoneNumber);
+  
+  // Normalize the input phone number
+  const normalizedInput = normalizePhoneNumber(phoneNumber);
+  console.log('📞 Normalized input:', normalizedInput);
+  
+  if (!normalizedInput) {
+    throw new Error('Please provide a valid phone number');
+  }
+  
+  // Build search patterns for various phone formats
+  const searchPatterns = [];
+  
+  if (exactMatch) {
+    // For exact match, try multiple formats
+    if (normalizedInput.length === 10) {
+      searchPatterns.push(normalizedInput); // 5551234567
+      searchPatterns.push(`1${normalizedInput}`); // 15551234567
+      searchPatterns.push(`${normalizedInput.slice(0,3)}-${normalizedInput.slice(3,6)}-${normalizedInput.slice(6)}`); // 555-123-4567
+      searchPatterns.push(`(${normalizedInput.slice(0,3)}) ${normalizedInput.slice(3,6)}-${normalizedInput.slice(6)}`); // (555) 123-4567
+      searchPatterns.push(`+1 (${normalizedInput.slice(0,3)}) ${normalizedInput.slice(3,6)}-${normalizedInput.slice(6)}`); // +1 (555) 123-4567
+    } else if (normalizedInput.length === 11 && normalizedInput.startsWith('1')) {
+      const withoutCountry = normalizedInput.slice(1);
+      searchPatterns.push(normalizedInput); // 15551234567
+      searchPatterns.push(withoutCountry); // 5551234567
+      searchPatterns.push(`${withoutCountry.slice(0,3)}-${withoutCountry.slice(3,6)}-${withoutCountry.slice(6)}`); // 555-123-4567
+      searchPatterns.push(`(${withoutCountry.slice(0,3)}) ${withoutCountry.slice(3,6)}-${withoutCountry.slice(6)}`); // (555) 123-4567
+      searchPatterns.push(`+1 (${withoutCountry.slice(0,3)}) ${withoutCountry.slice(3,6)}-${withoutCountry.slice(6)}`); // +1 (555) 123-4567
+    }
+  }
+  
+  // Build WHERE clause
+  let whereClause;
+  if (exactMatch && searchPatterns.length > 0) {
+    const escapedPatterns = searchPatterns.map(pattern => `'${pattern.replace(/'/g, "\\'")}'`);
+    whereClause = `Phone IN (${escapedPatterns.join(', ')})`;
+  } else {
+    // Partial match - search for the normalized digits anywhere in the phone field
+    whereClause = `Phone LIKE '%${normalizedInput.replace(/'/g, "\\'")}%'`;
+  }
+  
+  const query = `
+    SELECT Id, Name, Phone, PersonEmail, PersonMailingAddress, PersonMobilePhone
+    FROM Account 
+    WHERE (${whereClause} OR PersonMobilePhone LIKE '%${normalizedInput.replace(/'/g, "\\'")}%')
+    AND IsPersonAccount = true
+    ORDER BY Name
+    LIMIT 20
+  `;
+  
+  console.log('📞 Phone search query:', query);
+  
+  const result = await conn.query(query);
+  const clients = result.records || [];
+  
+  console.log(`📞 Found ${clients.length} clients matching phone number`);
+  
+  const formattedClients = clients.map(client => ({
+    clientId: client.Id,
+    name: client.Name,
+    phone: formatPhoneForDisplay(client.Phone),
+    mobilePhone: formatPhoneForDisplay(client.PersonMobilePhone),
+    email: client.PersonEmail,
+    address: client.PersonMailingAddress,
+    rawPhone: client.Phone, // Include raw phone for debugging
+    rawMobile: client.PersonMobilePhone
+  }));
+  
+  const searchSummary = exactMatch ? 
+    `Exact match search for phone: ${phoneNumber}` :
+    `Partial match search for phone: ${phoneNumber} (normalized: ${normalizedInput})`;
+  
+  return {
+    content: [{
+      type: 'text',
+      text: `${searchSummary}\n\nFound ${clients.length} matching clients:\n\n${JSON.stringify(formattedClients, null, 2)}`
+    }]
+  };
+}
+
 async function handleSearchClients(args) {
   const { searchTerm, limit = 10 } = args;
   
   console.log('🔍 Searching for clients with term:', searchTerm);
   
+  // Enhanced search - if search term looks like a phone number, normalize it
+  const normalizedPhone = normalizePhoneNumber(searchTerm);
+  const isPhoneSearch = normalizedPhone && normalizedPhone.length >= 7;
+  
+  let phoneSearchClause = '';
+  if (isPhoneSearch) {
+    phoneSearchClause = ` OR Phone LIKE '%${normalizedPhone}%' OR PersonMobilePhone LIKE '%${normalizedPhone}%'`;
+  }
+  
   const query = `
-    SELECT Id, Name, Phone, PersonEmail, PersonMailingAddress
+    SELECT Id, Name, Phone, PersonEmail, PersonMailingAddress, PersonMobilePhone
     FROM Account 
     WHERE (Name LIKE '%${searchTerm.replace(/'/g, "\\'")}%' 
-           OR Phone LIKE '%${searchTerm.replace(/'/g, "\\'")}%')
+           OR Phone LIKE '%${searchTerm.replace(/'/g, "\\'")}%'
+           OR PersonMobilePhone LIKE '%${searchTerm.replace(/'/g, "\\'")}%'
+           ${phoneSearchClause})
     AND IsPersonAccount = true
     ORDER BY Name
     LIMIT ${limit}
   `;
+  
+  console.log('🔍 General search query:', query);
   
   const result = await conn.query(query);
   const clients = result.records || [];
@@ -446,7 +584,8 @@ async function handleSearchClients(args) {
   const formattedClients = clients.map(client => ({
     clientId: client.Id,
     name: client.Name,
-    phone: client.Phone,
+    phone: formatPhoneForDisplay(client.Phone),
+    mobilePhone: formatPhoneForDisplay(client.PersonMobilePhone),
     email: client.PersonEmail,
     address: client.PersonMailingAddress
   }));
@@ -465,6 +604,7 @@ app.listen(port, () => {
   console.log('  - get_client_requests: View pending and completed client requests');
   console.log('  - get_client_request_details: Get full details of a specific request');
   console.log('  - respond_to_client_request: Answer client requests');
-  console.log('  - search_clients: Find clients by name or phone');
+  console.log('  - search_clients: Find clients by name or phone (enhanced)');
+  console.log('  - find_client_by_phone: Dedicated phone number search with intelligent formatting');
   console.log('🔗 Health check: http://localhost:' + port + '/health');
 });

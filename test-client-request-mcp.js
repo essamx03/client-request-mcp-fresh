@@ -110,6 +110,33 @@ async function testMCPServer() {
       console.log('✅ Client search successful');
       console.log('   Response preview:', searchData.result?.content?.[0]?.text?.substring(0, 100) + '...');
     }
+    console.log('');
+
+    // Test 6: Find Client by Phone
+    console.log('6. Testing find_client_by_phone...');
+    const phoneResponse = await fetch(SERVER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 5,
+        method: 'tools/call',
+        params: {
+          name: 'find_client_by_phone',
+          arguments: {
+            phoneNumber: '555-123-4567',
+            exactMatch: false
+          }
+        }
+      })
+    });
+    const phoneData = await phoneResponse.json();
+    if (phoneData.error) {
+      console.log('❌ Error finding client by phone:', phoneData.error.message);
+    } else {
+      console.log('✅ Phone search successful');
+      console.log('   Response preview:', phoneData.result?.content?.[0]?.text?.substring(0, 100) + '...');
+    }
 
     console.log('\n🎉 MCP Server test completed!');
     console.log('\n📋 Next Steps:');
