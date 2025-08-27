@@ -2,9 +2,9 @@
   "name": "simple-mcp-test",
   "version": "1.0.0",
   "type": "module",
-  "main": "simple-mcp.js",
+  "main": "simple-mcp-fixed.js",
   "scripts": {
-    "start": "node simple-mcp.js"
+    "start": "node simple-mcp-fixed.js"
   },
   "dependencies": {
     "express": "^4.19.2"
