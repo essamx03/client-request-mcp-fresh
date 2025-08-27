@@ -5,6 +5,15 @@ const port = process.env.PORT || 3002;
 
 app.use(express.json());
 
+// Add logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`, {
+    headers: req.headers,
+    body: req.body
+  });
+  next();
+});
+
 // Add CORS headers for Retell
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: simple-mcp-server
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node simple-mcp.js
+    envVars:
+      - key: NODE_ENV
+        value: production
