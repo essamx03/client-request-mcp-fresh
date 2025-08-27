@@ -1,0 +1,10 @@
+🚀 Tax Prep MCP Server running on http://localhost:3001
+📋 Integrated with Tax Prep Information table
+🔗 MCP endpoint: http://localhost:3001/mcp
+✅ Connected to Salesforce sandbox
+📧 Simulating email send to: dwood@miadvg.com
+📋 Tax returns being sent: 3
+❌ Error: TypeError: Assignment to constant variable.
+    at TaxPrepMCPTools.createMailRequest (file:///Users/samabdullah/Main/Dustin/mcp-toolbox/http-server.js:205:26)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/samabdullah/Main/Dustin/mcp-toolbox/http-server.js:291:26
